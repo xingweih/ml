@@ -1,6 +1,7 @@
-#!/usr/bin/python3
+#!/home/hxw/anaconda3/envs/tensorflow/bin/python
 
 import tensorflow as tf
+import numpy as np 
 
 def fc(x, sizeIn, sizeOut, name, relu=True):
 	with tf.variable_scope(name) as scope:
@@ -84,3 +85,20 @@ def inference(images):
 	fc8 = fc(fc7, 4096, 1000, name='fc7')
 	dropout8 = dropout(fc8, 0.5)
 
+def load_initial_params(weight_bias):
+	weights_dict = np.load(weight_bias, encoding='bytes').item()
+	print(weights_dict.keys())
+	for op_name in weights_dict:
+		print(op_name)
+		with tf.variable_scope(op_name, reuse=True) as scope:
+			for data in weights_dict[op_name]:
+				print(scope)
+				if(len(data.shape) == 1):
+					var = tf.get_variable('biases', trainable=False)
+				else:
+					var = tf.get_variable('weights', trainable=False)
+					
+if __name__ == '__main__':
+	print('begin')
+	load_initial_params('alexnet.npy')
+	print('end')
