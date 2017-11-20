@@ -17,7 +17,7 @@ def createTFRecords():
 		label = line.split()[1]
 		label = int(label)
 		label = int(float(label) / 2 + 0.5)
-		print(label)
+		#print(label)
 		imageName = path + 'JPEGImages/' + imageName + '.jpg'
 		image = Image.open(imageName)
 		image = image.resize((width, height))
@@ -26,7 +26,6 @@ def createTFRecords():
 		imageRaw = tf.gfile.FastGFile(imageName, 'rb').read()
 		image = tf.image.decode_jpeg(imageRaw)
 		image = tf.image.resize_images(image, size=[width, height])
-		imageBytes = image.tobytes()
 		'''
 		example = tf.train.Example(features=tf.train.Features(feature={
 		'label': tf.train.Feature(int64_list=tf.train.Int64List(value=[label])),

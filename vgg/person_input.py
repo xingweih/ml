@@ -7,7 +7,7 @@ import matplotlib as plt
 width = 224
 height = 224
 channel = 3
-batch = 128 
+batch = 1 
 numExaplesPerEpoch = 2000
 
 def readOneImage(fileNameQueue):

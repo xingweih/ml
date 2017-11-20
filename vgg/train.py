@@ -2,6 +2,7 @@
 
 import tensorflow as tf
 import numpy as np 
+import person_input
 
 def fc(x, sizeIn, sizeOut, name, relu=True, weight_bias=None):
 	with tf.variable_scope(name) as scope:
@@ -186,13 +187,25 @@ def inference(images, weight_bias=None, dropoutRate=1.0):
 
 if __name__ == '__main__':
 	print('---------------Program Begin--------------------')
+	imageBatch, labelBatch = person_input.input('person_train.tfrecords')
+	init = tf.global_variables_initializer()
 	with tf.Session() as sess:
+
 		image_raw = tf.gfile.FastGFile('pic.jpg', 'rb').read()
 		image = tf.image.decode_jpeg(image_raw, channels=3)
 		image = tf.image.resize_images(image, size=(224, 224))
 		image = tf.expand_dims(image, 0)
+
+		coord = tf.train.Coordinator()
+#		sess.run(tf.global_variables_initializer())
+		threads = tf.train.start_queue_runners(coord=coord)
+		images, labels = sess.run([imageBatch, labelBatch])
+
+		print(images)
 		inference = inference(image)
-		sess.run(tf.global_variables_initializer())
-		res = sess.run(inference)
+		res = sess.run([init, inference])
+
+		coord.request_stop()
+		coord.join(threads)
 	print('---------------Program End--------------------')
 	
