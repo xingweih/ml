@@ -3,6 +3,20 @@
 import tensorflow as tf
 import numpy as np 
 import person_input
+import argparse
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--batch_size', type=int, default=128,
+                    help='Number of images to process in a batch.')
+FLAGS = parser.parse_args()
+
+NUM_CLASSES = 10
+MOVING_AVERAGE_DECAY = 0.9999     # The decay to use for the moving average.
+NUM_EPOCHS_PER_DECAY = 350.0      # Epochs after which learning rate decays.
+LEARNING_RATE_DECAY_FACTOR = 0.1  # Learning rate decay factor.
+INITIAL_LEARNING_RATE = 0.1       # Initial learning rate.
+NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 1000
 
 def fc(x, sizeIn, sizeOut, name, relu=True, weight_bias=None):
 	with tf.variable_scope(name) as scope:
@@ -23,6 +37,7 @@ def dropout(x, keep_prob):
 	return tf.nn.dropout(x, keep_prob)
 
 def inference(images, weight_bias=None, dropoutRate=1.0):
+	print('----------------train.inference---------------------')
 	with tf.variable_scope('conv1') as scope:
 		if(weight_bias == None):
 			weights = tf.Variable(tf.truncated_normal([3, 3, 3, 64],
@@ -181,14 +196,68 @@ def inference(images, weight_bias=None, dropoutRate=1.0):
 	fc7 = fc(fc6, 4096, 4096, name='fc7', weight_bias=weight_bias)
 	dropout7 = dropout(fc7, dropoutRate)
 
-	fc8 = fc(fc7, 4096, 1000, name='fc8', weight_bias=weight_bias)
+	fc8 = fc(fc7, 4096, NUM_CLASSES, name='fc8', weight_bias=weight_bias)
 	dropout8 = dropout(fc8, dropoutRate)
 	return dropout8
 
+def loss(logits, labels):
+	print('----------------train.loss---------------------')
+	labels = tf.cast(labels, tf.int64)
+	cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(
+	labels=labels, logits=logits, name='cross_entropy_per_example')
+	cross_entropy_mean = tf.reduce_mean(cross_entropy, name='cross_entropy')
+	tf.add_to_collection('losses', cross_entropy_mean)
+
+	return tf.add_n(tf.get_collection('losses'), name='total_loss')
+
+def _add_loss_summaries(total_loss):
+	print('----------------train._add_loss_summaries---------------------')
+	loss_averages = tf.train.ExponentialMovingAverage(0.9, name='avg')
+	losses = tf.get_collection('losses')
+	loss_averages_op = loss_averages.apply(losses + [total_loss])
+	for l in losses + [total_loss]:
+		tf.summary.scalar(l.op.name + ' (raw)', l)
+		tf.summary.scalar(l.op.name, loss_averages.average(l))
+	return loss_averages_op
+
+def train(total_loss, global_step):
+	print('----------------train.train---------------------')
+	num_batches_per_epoch = NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN / FLAGS.batch_size
+	decay_steps = int(num_batches_per_epoch * NUM_EPOCHS_PER_DECAY)
+
+	lr = tf.train.exponential_decay(INITIAL_LEARNING_RATE,
+									global_step,
+									decay_steps,
+									LEARNING_RATE_DECAY_FACTOR,
+									staircase=True)
+	tf.summary.scalar('learning_rate', lr)
+	loss_averages_op = _add_loss_summaries(total_loss)
+
+	with tf.control_dependencies([loss_averages_op]):
+		opt = tf.train.GradientDescentOptimizer(lr)
+		grads = opt.compute_gradients(total_loss)
+	
+	apply_gradient_op = opt.apply_gradients(grads, global_step)
+
+	for var in tf.trainable_variables():
+		tf.summary.histogram(var.op.name, var)
+
+	for grad, var in grads:
+		if grad is not None:
+			tf.summary.histogram(var.op.name + '/gradients', grad)
+
+	variable_averages = tf.train.ExponentialMovingAverage(
+		MOVING_AVERAGE_DECAY, global_step)
+	variables_averages_op = variable_averages.apply(tf.trainable_variables())
+
+	with tf.control_dependencies([apply_gradient_op, variables_averages_op]):
+		train_op = tf.no_op(name='train')
+	return train_op
+		
+	
 if __name__ == '__main__':
 	print('---------------Program Begin--------------------')
 	imageBatch, labelBatch = person_input.input('person_train.tfrecords')
-	init = tf.global_variables_initializer()
 	with tf.Session() as sess:
 
 		image_raw = tf.gfile.FastGFile('pic.jpg', 'rb').read()
@@ -197,13 +266,14 @@ if __name__ == '__main__':
 		image = tf.expand_dims(image, 0)
 
 		coord = tf.train.Coordinator()
-#		sess.run(tf.global_variables_initializer())
 		threads = tf.train.start_queue_runners(coord=coord)
 		images, labels = sess.run([imageBatch, labelBatch])
 
-		print(images)
-		inference = inference(image)
-		res = sess.run([init, inference])
+		#print(images)
+		inference = inference(images)
+		sess.run(tf.global_variables_initializer())
+		res = sess.run(inference)
+		print(res)
 
 		coord.request_stop()
 		coord.join(threads)
