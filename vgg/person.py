@@ -11,7 +11,7 @@ parser.add_argument('--batch_size', type=int, default=128,
                     help='Number of images to process in a batch.')
 FLAGS = parser.parse_args()
 
-NUM_CLASSES = 10
+NUM_CLASSES = 2
 MOVING_AVERAGE_DECAY = 0.9999     # The decay to use for the moving average.
 NUM_EPOCHS_PER_DECAY = 350.0      # Epochs after which learning rate decays.
 LEARNING_RATE_DECAY_FACTOR = 0.1  # Learning rate decay factor.
@@ -21,8 +21,12 @@ NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 1000
 def fc(x, sizeIn, sizeOut, name, relu=True, weight_bias=None):
 	with tf.variable_scope(name) as scope:
 		if(weight_bias == None):
-			weights = tf.get_variable('weights', shape=[sizeIn, sizeOut], trainable=True)
-			biases = tf.get_variable('biases', shape=[sizeOut], trainable=True)
+			weights = tf.get_variable(name='weights', shape=[sizeIn, sizeOut],
+									  initializer=tf.contrib.layers.xavier_initializer(),
+									  trainable=True)
+			biases = tf.get_variable('biases', shape=[sizeOut],
+									 initializer=tf.constant_initializer(0.0),
+									 trainable=True)
 		else:
 			weights = weight_bias[name][0]
 			biases = weight_bias[name][1]
@@ -210,6 +214,11 @@ def loss(logits, labels):
 
 	return tf.add_n(tf.get_collection('losses'), name='total_loss')
 
+def accuracy(logits, labels):
+	return 100.0 - (
+		100 * 
+		np.sum(logits == labels) / labels.shape[0])
+
 def _add_loss_summaries(total_loss):
 	print('----------------train._add_loss_summaries---------------------')
 	loss_averages = tf.train.ExponentialMovingAverage(0.9, name='avg')
@@ -252,7 +261,7 @@ def train(total_loss, global_step):
 
 	with tf.control_dependencies([apply_gradient_op, variables_averages_op]):
 		train_op = tf.no_op(name='train')
-	return train_op
+	return total_loss, train_op
 		
 	
 if __name__ == '__main__':

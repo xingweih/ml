@@ -57,22 +57,28 @@ def train():
 			log_device_placement=FLAGS.log_device_placement)) as mon_sess:
 		while not mon_sess.should_stop():
 			mon_sess.run(train_op)
-
 		'''
+
 		with tf.Session() as sess:
 			coord = tf.train.Coordinator()
 			threads = tf.train.start_queue_runners(coord=coord)
 			images, labels = sess.run([imageBatch, labelBatch])
 
 			logits = person.inference(images)
-			loss = person.loss(logits, labels)
-			train_op = person.train(loss, global_step)
+			total_loss = person.loss(logits, labels)
+			loss_op, train_op = person.train(total_loss, global_step)
 
-			print(images)
+			#print(images)
 			sess.run(tf.global_variables_initializer())
 			for i in range(100):
-				sess.run(train_op)
-				print('loss ' + str(loss.eval()))
+				loss, train = sess.run([loss_op, train_op])
+				accuracy = np.sum(logits.eval() == labels) / 128.0
+				print(logits)
+				print(logits.eval())
+				#print(labels)
+				print(str(i) + ' round, loss = ' + str(loss) +
+					  '. accuracy = ' + str(accuracy))
+
 			coord.request_stop()
 			coord.join(threads)
 
