@@ -8,18 +8,21 @@ width = 224
 height = 224
 channel = 3
 batch = 16 
-numExaplesPerEpoch = 2000
+numExaplesPerEpoch = 100
+NUM_CLASSES = 20
 
 def readOneImage(fileNameQueue):
 	reader = tf.TFRecordReader()
 	_, serializedExample = reader.read(fileNameQueue)
 	features = tf.parse_single_example(serializedExample,
 									   features={
-									   	'label': tf.FixedLenFeature([], tf.int64),
+									   	'label': tf.FixedLenFeature([], tf.string),
 									   	'image': tf.FixedLenFeature([], tf.string),
 									   })
 	image = tf.decode_raw(features['image'], tf.uint8)
-	label = tf.cast(features['label'], tf.int32)
+#label = tf.cast(features['label'], tf.uint8)
+	label = tf.decode_raw(features['label'], tf.uint8)
+	print(label)
 	return image, label
 
 def generateBatchImageLabel(image, label, minQueueNum, batchSize, shuffle):
@@ -37,7 +40,7 @@ def generateBatchImageLabel(image, label, minQueueNum, batchSize, shuffle):
 			batch_size=batchSize,
 			num_threads=numPreprocessThreashs,
 			capacity=minQueueNum + 3 * batchSize)
-	return images, tf.reshape(labels, [batchSize])
+	return images, tf.reshape(labels, [batchSize, NUM_CLASSES])
 
 def input(TFRecordsFile):
 	fileNameQueue = tf.train.string_input_producer([TFRecordsFile])
@@ -46,7 +49,7 @@ def input(TFRecordsFile):
 	imageFloat = tf.cast(image, tf.float32)
 	labelFloat = tf.cast(label, tf.float32)
 	imageFloat = tf.reshape(imageFloat, [width, height, channel])
-	labelFloat = tf.reshape(labelFloat, [1])
+	labelFloat = tf.reshape(labelFloat, [NUM_CLASSES])
 
 	#imageFloat = tf.image.per_image_standardization(imageFloat)
 	minFractionInQueue = 0.4
@@ -62,7 +65,6 @@ def main():
 		sess.run(init)
 		threads = tf.train.start_queue_runners(coord=coord)
 		image, label = sess.run([imageBatch, labelBatch])
-		print(type(image))
 		print(label)
 		coord.request_stop()
 		coord.join(threads)
