@@ -9,8 +9,7 @@ height = 224
 NUM_CLASSES = 20
 
 def createTFRecords():
-	imageNum = 0
-	writer = tf.python_io.TFRecordWriter("person_train.tfrecords")
+	writer = tf.python_io.TFRecordWriter("all_train.tfrecords")
 	path = '../../../VOCdevkit/VOC2012/'
 	fileList = open(path + 'ImageSets/Main/all_train_onehot_labels.txt')
 	line = fileList.readline()
@@ -20,12 +19,10 @@ def createTFRecords():
 		for i in range(NUM_CLASSES):
 			label.append(int(line.split()[i+1]))
 		labelBytes = bytes(label)
-		print(labelBytes)
 		imageName = path + 'JPEGImages/' + imageName + '.jpg'
 		image = Image.open(imageName)
 		image = image.resize((width, height))
 		imageBytes = image.tobytes()
-		print(type(imageBytes))
 		'''
 		imageRaw = tf.gfile.FastGFile(imageName, 'rb').read()
 		image = tf.image.decode_jpeg(imageRaw)
@@ -37,9 +34,6 @@ def createTFRecords():
 		}))
 		writer.write(example.SerializeToString())
 		line = fileList.readline()
-		imageNum += 1
-		if(imageNum > 100):
-			return
 	fileList.close()
 	writer.close()
 

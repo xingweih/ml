@@ -8,7 +8,7 @@ width = 224
 height = 224
 channel = 3
 batch = 16 
-numExaplesPerEpoch = 100
+numExaplesPerEpoch = 200
 NUM_CLASSES = 20
 
 def readOneImage(fileNameQueue):
@@ -22,7 +22,6 @@ def readOneImage(fileNameQueue):
 	image = tf.decode_raw(features['image'], tf.uint8)
 #label = tf.cast(features['label'], tf.uint8)
 	label = tf.decode_raw(features['label'], tf.uint8)
-	print(label)
 	return image, label
 
 def generateBatchImageLabel(image, label, minQueueNum, batchSize, shuffle):
@@ -51,14 +50,14 @@ def input(TFRecordsFile):
 	imageFloat = tf.reshape(imageFloat, [width, height, channel])
 	labelFloat = tf.reshape(labelFloat, [NUM_CLASSES])
 
-	#imageFloat = tf.image.per_image_standardization(imageFloat)
+	imageFloat = tf.image.per_image_standardization(imageFloat)
 	minFractionInQueue = 0.4
 	minQueueExample = int(minFractionInQueue * numExaplesPerEpoch) 
 	return generateBatchImageLabel(imageFloat, labelFloat, minQueueExample,
 								   batch, shuffle=True)
 
 def main():
-	imageBatch, labelBatch = input('person_train.tfrecords')
+	imageBatch, labelBatch = input('all_train.tfrecords')
 	init = tf.global_variables_initializer()
 	with tf.Session() as sess:
 		coord = tf.train.Coordinator()

@@ -20,7 +20,7 @@ parser.add_argument('--log_frequency', type=int, default=10,
 def train():
 	with tf.Graph().as_default():
 		global_step = tf.contrib.framework.get_or_create_global_step()
-		imageBatch, labelBatch = person_input.input('person_train.tfrecords')
+		imageBatch, labelBatch = person_input.input('all_train.tfrecords')
 
 		'''
 		class _LoggerHook(tf.train.SessionRunHook):
@@ -72,12 +72,10 @@ def train():
 			sess.run(tf.global_variables_initializer())
 			for i in range(100):
 				loss, train = sess.run([loss_op, train_op])
-				accuracy = np.sum(logits.eval() == labels) / 128.0
-				print(logits)
-				print(logits.eval())
+				#accuracy = np.sum(logits.eval() == labels) / 128.0
 				#print(labels)
-				print(str(i) + ' round, loss = ' + str(loss) +
-					  '. accuracy = ' + str(accuracy))
+				print(logits.eval())
+				print(str(i) + ' round, loss = ' + str(loss))
 
 			coord.request_stop()
 			coord.join(threads)

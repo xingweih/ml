@@ -11,11 +11,11 @@ parser.add_argument('--batch_size', type=int, default=128,
                     help='Number of images to process in a batch.')
 FLAGS = parser.parse_args()
 
-NUM_CLASSES = 2
+NUM_CLASSES = 20
 MOVING_AVERAGE_DECAY = 0.9999     # The decay to use for the moving average.
 NUM_EPOCHS_PER_DECAY = 350.0      # Epochs after which learning rate decays.
 LEARNING_RATE_DECAY_FACTOR = 0.1  # Learning rate decay factor.
-INITIAL_LEARNING_RATE = 0.1       # Initial learning rate.
+INITIAL_LEARNING_RATE = 0.01       # Initial learning rate.
 NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 1000
 
 def fc(x, sizeIn, sizeOut, name, relu=True, weight_bias=None):
@@ -206,9 +206,13 @@ def inference(images, weight_bias=None, dropoutRate=1.0):
 
 def loss(logits, labels):
 	print('----------------train.loss---------------------')
-	labels = tf.cast(labels, tf.int64)
+	labels = tf.cast(labels, tf.float32)
+	'''
 	cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(
-	labels=labels, logits=logits, name='cross_entropy_per_example')
+						labels=labels, logits=logits, name='cross_entropy_per_example')
+	'''
+	cross_entropy = tf.nn.sigmoid_cross_entropy_with_logits(
+						labels=labels, logits=logits, name='cross_entropy_per_example')
 	cross_entropy_mean = tf.reduce_mean(cross_entropy, name='cross_entropy')
 	tf.add_to_collection('losses', cross_entropy_mean)
 
@@ -266,7 +270,7 @@ def train(total_loss, global_step):
 	
 if __name__ == '__main__':
 	print('---------------Program Begin--------------------')
-	imageBatch, labelBatch = person_input.input('person_train.tfrecords')
+	imageBatch, labelBatch = person_input.input('all_train.tfrecords')
 	with tf.Session() as sess:
 
 		image_raw = tf.gfile.FastGFile('pic.jpg', 'rb').read()
