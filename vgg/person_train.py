@@ -1,6 +1,7 @@
 #!/home/hxw/anaconda3/envs/tensorflow/bin/python 
 import tensorflow as tf
 import numpy as np 
+from PIL import Image
 
 
 import person_input
@@ -17,10 +18,15 @@ parser.add_argument('--log_device_placement', type=bool, default=False,
 parser.add_argument('--log_frequency', type=int, default=10,
                     help='How often to log results to the console.')
 
+TRAIN_ROUND = 10
+NUM_CLASSES = person_input.NUM_CLASSES
+batch = person_input.batch
+
 def train():
 	with tf.Graph().as_default():
 		global_step = tf.contrib.framework.get_or_create_global_step()
 		imageBatch, labelBatch = person_input.input('all_train.tfrecords')
+		thresh = tf.constant(0.5, shape=[batch, NUM_CLASSES])
 
 		'''
 		class _LoggerHook(tf.train.SessionRunHook):
@@ -66,16 +72,26 @@ def train():
 
 			logits = person.inference(images)
 			total_loss = person.loss(logits, labels)
-			loss_op, train_op = person.train(total_loss, global_step)
+			loss_op, train_op, lr_op = person.train(total_loss, global_step)
 
 			#print(images)
+			#print(tf.trainable_variables())
 			sess.run(tf.global_variables_initializer())
-			for i in range(100):
-				loss, train = sess.run([loss_op, train_op])
+			for i in range(TRAIN_ROUND):
+				loss, train, lr = sess.run([loss_op, train_op, lr_op])
 				#accuracy = np.sum(logits.eval() == labels) / 128.0
-				#print(labels)
-				print(logits.eval())
+				#print('labels' + str(labels))
+				#print('logits' + str(logits.eval()))
 				print(str(i) + ' round, loss = ' + str(loss))
+				print(str(i) + ' round, lr = ' + str(lr))
+				if(i == TRAIN_ROUND-1):
+					print('labels' + str(labels))
+					resSigmoid = tf.sigmoid(logits.eval())
+					resCompare = tf.greater(resSigmoid, thresh)
+					np.savetxt('pred.txt', sess.run(resCompare), fmt='%.4f')
+					resEqual = tf.equal(resCompare, labels)
+					resEqual = tf.cast(resEqual, tf.int32)
+					np.savetxt('compare.txt', sess.run(resEqual), fmt='%d')
 
 			coord.request_stop()
 			coord.join(threads)
