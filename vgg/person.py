@@ -9,6 +9,8 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--batch_size', type=int, default=128,
                     help='Number of images to process in a batch.')
+parser.add_argument('--test', type=int, default=1,
+                    help='train or test')
 FLAGS = parser.parse_args()
 FLAGS.batch_size = person_input.batch
 
@@ -41,24 +43,36 @@ def fc(x, sizeIn, sizeOut, name, relu=True, weight_bias=None):
 def dropout(x, keep_prob):
 	return tf.nn.dropout(x, keep_prob)
 
+
+def generate_variables(name, shape, initializer):
+	return tf.get_variable(name=name,
+ 						   shape=shape,
+						   initializer=initializer)
+
+def generate_weight(name, shape, stddev, dtype=tf.float32):
+	return generate_variables(name, shape,
+		initializer=tf.truncated_normal_initializer(stddev=stddev, dtype=dtype))
+
+def generate_bias(name, shape, constant):
+	return generate_variables(name, shape,
+		initializer=tf.constant_initializer(constant))
+
+
+
 def inference(images, weight_bias=None, dropoutRate=1.0):
 	print('----------------train.inference---------------------')
 	with tf.variable_scope('conv1') as scope:
 		if(weight_bias == None):
-			weights = tf.Variable(tf.truncated_normal([3, 3, 3, 64],
-				dtype=tf.float32, stddev=1e-2), name='weights')
-			biases = tf.Variable(tf.constant(0.0, shape=[64], dtype=tf.float32),
-				name='biases')
+			weights = generate_weight(name='weights', shape=[3, 3, 3, 64], stddev=1e-2)
+			biases = generate_bias(name='biases', shape=[64], constant=0.0)
 		conv = tf.nn.conv2d(images, weights, [1, 1, 1, 1], padding='SAME')
 		pre_activation = tf.nn.bias_add(conv, biases)
 		conv1 = tf.nn.relu(pre_activation, name=scope.name)
 
 	with tf.variable_scope('conv2') as scope:
 		if(weight_bias == None):
-			weights = tf.Variable(tf.truncated_normal([3, 3, 64, 64],
-				dtype=tf.float32, stddev=1e-2), name='weights')
-			biases = tf.Variable(tf.constant(0.1, shape=[64], dtype=tf.float32),
-				name='biases')
+			weights = generate_weight(name='weights', shape=[3, 3, 64, 64], stddev=1e-2)
+			biases = generate_bias(name='biases', shape=[64], constant=0.1)
 		conv = tf.nn.conv2d(conv1, weights, [1, 1, 1, 1], padding='SAME')
 		pre_activation = tf.nn.bias_add(conv, biases)
 		conv2 = tf.nn.relu(pre_activation, name=scope.name)
@@ -69,20 +83,16 @@ def inference(images, weight_bias=None, dropoutRate=1.0):
 
 	with tf.variable_scope('conv3') as scope:
 		if(weight_bias == None):
-			weights = tf.Variable(tf.truncated_normal([3, 3, 64, 128],
-				dtype=tf.float32, stddev=1e-2), name='weights')
-			biases = tf.Variable(tf.constant(0.1, shape=[128], dtype=tf.float32),
-				name='biases')
+			weights = generate_weight(name='weights', shape=[3, 3, 64, 128], stddev=1e-2)
+			biases = generate_bias(name='biases', shape=[128], constant=0.1)
 		conv = tf.nn.conv2d(pool1, weights, [1, 1, 1, 1], padding='SAME')
 		pre_activation = tf.nn.bias_add(conv, biases)
 		conv3 = tf.nn.relu(pre_activation, name=scope.name)
 
 	with tf.variable_scope('conv4') as scope:
 		if(weight_bias == None):
-			weights = tf.Variable(tf.truncated_normal([3, 3, 128, 128],
-				dtype=tf.float32, stddev=1e-2), name='weights')
-			biases = tf.Variable(tf.constant(0.1, shape=[128], dtype=tf.float32),
-				name='biases')
+			weights = generate_weight(name='weights', shape=[3, 3, 128, 128], stddev=1e-2)
+			biases = generate_bias(name='biases', shape=[128], constant=0.1)
 		conv = tf.nn.conv2d(conv3, weights, [1, 1, 1, 1], padding='SAME')
 		pre_activation = tf.nn.bias_add(conv, biases)
 		conv4 = tf.nn.relu(pre_activation, name=scope.name)
@@ -93,30 +103,24 @@ def inference(images, weight_bias=None, dropoutRate=1.0):
 
 	with tf.variable_scope('conv5') as scope:
 		if(weight_bias == None):
-			weights = tf.Variable(tf.truncated_normal([3, 3, 128, 256],
-				dtype=tf.float32, stddev=1e-2), name='weights')
-			biases = tf.Variable(tf.constant(0.1, shape=[256], dtype=tf.float32),
-				name='biases')
+			weights = generate_weight(name='weights', shape=[3, 3, 128, 256], stddev=1e-2)
+			biases = generate_bias(name='biases', shape=[256], constant=0.1)
 		conv = tf.nn.conv2d(pool2, weights, [1, 1, 1, 1], padding='SAME')
 		pre_activation = tf.nn.bias_add(conv, biases)
 		conv5 = tf.nn.relu(pre_activation, name=scope.name)
 
 	with tf.variable_scope('conv6') as scope:
 		if(weight_bias == None):
-			weights = tf.Variable(tf.truncated_normal([3, 3, 256, 256],
-				dtype=tf.float32, stddev=1e-2), name='weights')
-			biases = tf.Variable(tf.constant(0.1, shape=[256], dtype=tf.float32),
-				name='biases')
+			weights = generate_weight(name='weights', shape=[3, 3, 256, 256], stddev=1e-2)
+			biases = generate_bias(name='biases', shape=[256], constant=0.1)
 		conv = tf.nn.conv2d(conv5, weights, [1, 1, 1, 1], padding='SAME')
 		pre_activation = tf.nn.bias_add(conv, biases)
 		conv6 = tf.nn.relu(pre_activation, name=scope.name)
 
 	with tf.variable_scope('conv7') as scope:
 		if(weight_bias == None):
-			weights = tf.Variable(tf.truncated_normal([3, 3, 256, 256],
-				dtype=tf.float32, stddev=1e-2), name='weights')
-			biases = tf.Variable(tf.constant(0.1, shape=[256], dtype=tf.float32),
-				name='biases')
+			weights = generate_weight(name='weights', shape=[3, 3, 256, 256], stddev=1e-2)
+			biases = generate_bias(name='biases', shape=[256], constant=0.1)
 		conv = tf.nn.conv2d(conv6, weights, [1, 1, 1, 1], padding='SAME')
 		pre_activation = tf.nn.bias_add(conv, biases)
 		conv7 = tf.nn.relu(pre_activation, name=scope.name)
@@ -127,30 +131,24 @@ def inference(images, weight_bias=None, dropoutRate=1.0):
 
 	with tf.variable_scope('conv8') as scope:
 		if(weight_bias == None):
-			weights = tf.Variable(tf.truncated_normal([3, 3, 256, 512],
-				dtype=tf.float32, stddev=1e-2), name='weights')
-			biases = tf.Variable(tf.constant(0.1, shape=[512], dtype=tf.float32),
-				name='biases')
+			weights = generate_weight(name='weights', shape=[3, 3, 256, 512], stddev=1e-2)
+			biases = generate_bias(name='biases', shape=[512], constant=0.1)
 		conv = tf.nn.conv2d(pool3, weights, [1, 1, 1, 1], padding='SAME')
 		pre_activation = tf.nn.bias_add(conv, biases)
 		conv8 = tf.nn.relu(pre_activation, name=scope.name)
 
 	with tf.variable_scope('conv9') as scope:
 		if(weight_bias == None):
-			weights = tf.Variable(tf.truncated_normal([3, 3, 512, 512],
-				dtype=tf.float32, stddev=1e-2), name='weights')
-			biases = tf.Variable(tf.constant(0.1, shape=[512], dtype=tf.float32),
-				name='biases')
+			weights = generate_weight(name='weights', shape=[3, 3, 512, 512], stddev=1e-2)
+			biases = generate_bias(name='biases', shape=[512], constant=0.1)
 		conv = tf.nn.conv2d(conv8, weights, [1, 1, 1, 1], padding='SAME')
 		pre_activation = tf.nn.bias_add(conv, biases)
 		conv9 = tf.nn.relu(pre_activation, name=scope.name)
 
 	with tf.variable_scope('conv10') as scope:
 		if(weight_bias == None):
-			weights = tf.Variable(tf.truncated_normal([3, 3, 512, 512],
-				dtype=tf.float32, stddev=1e-2), name='weights')
-			biases = tf.Variable(tf.constant(0.1, shape=[512], dtype=tf.float32),
-				name='biases')
+			weights = generate_weight(name='weights', shape=[3, 3, 512, 512], stddev=1e-2)
+			biases = generate_bias(name='biases', shape=[512], constant=0.1)
 		conv = tf.nn.conv2d(conv9, weights, [1, 1, 1, 1], padding='SAME')
 		pre_activation = tf.nn.bias_add(conv, biases)
 		conv10 = tf.nn.relu(pre_activation, name=scope.name)
@@ -161,30 +159,24 @@ def inference(images, weight_bias=None, dropoutRate=1.0):
 
 	with tf.variable_scope('conv11') as scope:
 		if(weight_bias == None):
-			weights = tf.Variable(tf.truncated_normal([3, 3, 512, 512],
-				dtype=tf.float32, stddev=1e-2), name='weights')
-			biases = tf.Variable(tf.constant(0.1, shape=[512], dtype=tf.float32),
-				name='biases')
+			weights = generate_weight(name='weights', shape=[3, 3, 512, 512], stddev=1e-2)
+			biases = generate_bias(name='biases', shape=[512], constant=0.1)
 		conv = tf.nn.conv2d(pool4, weights, [1, 1, 1, 1], padding='SAME')
 		pre_activation = tf.nn.bias_add(conv, biases)
 		conv11 = tf.nn.relu(pre_activation, name=scope.name)
 
 	with tf.variable_scope('conv12') as scope:
 		if(weight_bias == None):
-			weights = tf.Variable(tf.truncated_normal([3, 3, 512, 512],
-				dtype=tf.float32, stddev=1e-2), name='weights')
-			biases = tf.Variable(tf.constant(0.1, shape=[512], dtype=tf.float32),
-				name='biases')
+			weights = generate_weight(name='weights', shape=[3, 3, 512, 512], stddev=1e-2)
+			biases = generate_bias(name='biases', shape=[512], constant=0.1)
 		conv = tf.nn.conv2d(conv11, weights, [1, 1, 1, 1], padding='SAME')
 		pre_activation = tf.nn.bias_add(conv, biases)
 		conv12 = tf.nn.relu(pre_activation, name=scope.name)
 
 	with tf.variable_scope('conv13') as scope:
 		if(weight_bias == None):
-			weights = tf.Variable(tf.truncated_normal([3, 3, 512, 512],
-				dtype=tf.float32, stddev=1e-2), name='weights')
-			biases = tf.Variable(tf.constant(0.1, shape=[512], dtype=tf.float32),
-				name='biases')
+			weights = generate_weight(name='weights', shape=[3, 3, 512, 512], stddev=1e-2)
+			biases = generate_bias(name='biases', shape=[512], constant=0.1)
 		conv = tf.nn.conv2d(conv12, weights, [1, 1, 1, 1], padding='SAME')
 		pre_activation = tf.nn.bias_add(conv, biases)
 		conv13 = tf.nn.relu(pre_activation, name=scope.name)
