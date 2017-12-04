@@ -32,6 +32,12 @@ def train():
 			coord = tf.train.Coordinator()
 			threads = tf.train.start_queue_runners(coord=coord)
 
+			#tensorboard
+			#test = tf.constant([1, 2, 3, 4, 10])
+			#tf.summary.scalar('test', test)
+			merged = tf.summary.merge_all()
+			train_writer = tf.summary.FileWriter('tensorboard/', sess.graph)
+
 			images, labels = sess.run([imageBatch, labelBatch])
 			logits = person.inference(images)
 			total_loss = person.loss(logits, labels)
@@ -63,9 +69,13 @@ def train():
 						resEqual = tf.equal(resCompare, labels)
 						resEqual = tf.cast(resEqual, tf.int32)
 						np.savetxt('compare.txt', sess.run(resEqual), fmt='%d')
+					#tensorboard
+					summary = sess.run(merged)
+					train_writer.add_summary(summary, i)
 				saver.save(sess, 'model/train.ckpt')
 				coord.request_stop()
 				coord.join(threads)
+				train_writer.close()
 			else:#test
 				#way 1
 				model_file = tf.train.latest_checkpoint('model/')
