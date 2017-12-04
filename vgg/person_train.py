@@ -2,6 +2,7 @@
 import tensorflow as tf
 import numpy as np 
 from PIL import Image
+import argparse
 
 
 import person_input
@@ -17,19 +18,15 @@ parser.add_argument('--log_device_placement', type=bool, default=False,
 parser.add_argument('--log_frequency', type=int, default=10,
                     help='How often to log results to the console.')
 
-TRAIN_ROUND = 20
 NUM_CLASSES = person_input.NUM_CLASSES
 batch = person_input.batch
 
 def train():
+	TRAIN_ROUND = FLAGS.train_round 
 	with tf.Graph().as_default():
 		global_step = tf.contrib.framework.get_or_create_global_step()
 		imageBatch, labelBatch = person_input.input('all_train.tfrecords')
 		thresh = tf.constant(0.5, shape=[batch, NUM_CLASSES])
-		val = tf.get_variable('val', shape=[3, 3, 64, 64],
-				initializer=tf.truncated_normal_initializer(stddev=0.2),
-				trainable=True)
-		saver = tf.train.Saver({'weights': tf.get_variable(name='conv1/weights', shape=[3, 3, 3, 64])})
 
 		with tf.Session() as sess:
 			coord = tf.train.Coordinator()
@@ -42,46 +39,59 @@ def train():
 
 			#print(images)
 			#print(tf.trainable_variables())
+			saver = tf.train.Saver(tf.trainable_variables(), max_to_keep=1)
 			sess.run(tf.global_variables_initializer())
 			if(FLAGS.test == 0):
+				if(FLAGS.continue_train == 1):
+					model_file = tf.train.latest_checkpoint('model/')
+					saver.restore(sess, model_file)
+					print('restore model success')
 				for i in range(TRAIN_ROUND):
 					loss, train, lr = sess.run([loss_op, train_op, lr_op])
 					#accuracy = np.sum(logits.eval() == labels) / 128.0
 					#print('labels' + str(labels))
 					#print('logits' + str(logits.eval()))
 					print(str(i) + ' round, loss = ' + str(loss))
-					print(str(i) + ' round, lr = ' + str(lr))
+					print(str(i) + ' round, lr = '),
+					print('%.6f' % lr)
 					if(i == TRAIN_ROUND-1):
-						print('labels' + str(labels))
+						#print('labels' + str(labels))
 						resSigmoid = tf.sigmoid(logits.eval())
+						np.savetxt('sigmoid.txt', sess.run(resSigmoid), fmt='%.4f')
 						resCompare = tf.greater(resSigmoid, thresh)
 						np.savetxt('pred.txt', sess.run(resCompare), fmt='%.4f')
 						resEqual = tf.equal(resCompare, labels)
 						resEqual = tf.cast(resEqual, tf.int32)
 						np.savetxt('compare.txt', sess.run(resEqual), fmt='%d')
+				saver.save(sess, 'model/train.ckpt')
 				coord.request_stop()
 				coord.join(threads)
-				saver.save(sess, 'model/train.ckpt')
 			else:#test
-				#model_file = tf.train.latest_checkpoint('model/')
-				#saver.restore(sess, model_file)
+				#way 1
+				model_file = tf.train.latest_checkpoint('model/')
+				saver.restore(sess, model_file)
+				print('restore model success')
+				'''
+				#way 2
 				ckpt = tf.train.get_checkpoint_state('model/')
 				if ckpt and ckpt.model_checkpoint_path:
 					saver.restore(sess, ckpt.model_checkpoint_path)
 					print('restore model success')
 				else:
 					print('restore model fail')
-				#saver.restore(sess, 'model/train.ckpt')
-				print(tf.trainable_variables())
-				print(sess.run('conv1/weights:0'))
-
+				'''
+				'''
+				#way 3
+				saver.restore(sess, 'model/train.ckpt')
+				'''
 				loss, train, lr = sess.run([loss_op, train_op, lr_op])
 				print('test loss = ' + str(loss))
 				print('test lr = ' + str(lr))
-				print('labels' + str(labels))
 				resSigmoid = tf.sigmoid(logits.eval())
+				np.savetxt('sigmoid.txt', sess.run(resSigmoid), fmt='%.4f')
 				resCompare = tf.greater(resSigmoid, thresh)
-				np.savetxt('pred.txt', sess.run(resCompare), fmt='%.4f')
+				np.savetxt('pred.txt', sess.run(resCompare), fmt='%d')
+				np.savetxt('label.txt', labels, fmt='%d')
 				resEqual = tf.equal(resCompare, labels)
 				resEqual = tf.cast(resEqual, tf.int32)
 				np.savetxt('compare.txt', sess.run(resEqual), fmt='%d')

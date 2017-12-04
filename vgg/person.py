@@ -11,14 +11,18 @@ parser.add_argument('--batch_size', type=int, default=128,
                     help='Number of images to process in a batch.')
 parser.add_argument('--test', type=int, default=1,
                     help='train or test')
+parser.add_argument('--train_round', type=int, default=100,
+                    help='How many round to train')
+parser.add_argument('--continue_train', type=int, default=1,
+                    help='whether to use last result to continue to train')
 FLAGS = parser.parse_args()
 FLAGS.batch_size = person_input.batch
 
 NUM_CLASSES = 20
-MOVING_AVERAGE_DECAY = 0.9# The decay to use for the moving average.
-NUM_EPOCHS_PER_DECAY = 350.0      # Epochs after which learning rate decays.
-LEARNING_RATE_DECAY_FACTOR = 0.1  # Learning rate decay factor.
-INITIAL_LEARNING_RATE = 0.01       # Initial learning rate.
+MOVING_AVERAGE_DECAY = 0.99# The decay to use for the moving average.
+NUM_EPOCHS_PER_DECAY = 35.0      # Epochs after which learning rate decays.
+LEARNING_RATE_DECAY_FACTOR = 0.96  # Learning rate decay factor.
+INITIAL_LEARNING_RATE = 1e-2	# Initial learning rate.
 NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 1000
 
 def fc(x, sizeIn, sizeOut, name, relu=True, weight_bias=None):
@@ -50,8 +54,13 @@ def generate_variables(name, shape, initializer):
 						   initializer=initializer)
 
 def generate_weight(name, shape, stddev, dtype=tf.float32):
+	'''
 	return generate_variables(name, shape,
 		initializer=tf.truncated_normal_initializer(stddev=stddev, dtype=dtype))
+	'''
+	return tf.get_variable(name=name, shape=shape, 
+						   initializer=tf.contrib.layers.xavier_initializer_conv2d(),
+						  )
 
 def generate_bias(name, shape, constant):
 	return generate_variables(name, shape,
