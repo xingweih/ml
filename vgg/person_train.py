@@ -25,7 +25,7 @@ def train():
 	TRAIN_ROUND = FLAGS.train_round 
 	with tf.Graph().as_default():
 		global_step = tf.contrib.framework.get_or_create_global_step()
-		imageBatch, labelBatch = person_input.input('all_train.tfrecords')
+		imageBatch, labelBatch, indexBatch = person_input.input('all_train.tfrecords')
 		thresh = tf.constant(0.5, shape=[batch, NUM_CLASSES])
 
 		with tf.Session() as sess:
@@ -38,7 +38,7 @@ def train():
 			merged = tf.summary.merge_all()
 			train_writer = tf.summary.FileWriter('tensorboard/', sess.graph)
 
-			images, labels = sess.run([imageBatch, labelBatch])
+			images, labels, indexes = sess.run([imageBatch, labelBatch, indexBatch])
 			logits = person.inference(images)
 			total_loss = person.loss(logits, labels)
 			loss_op, train_op, lr_op = person.train(total_loss, global_step)
@@ -56,6 +56,7 @@ def train():
 					loss, train, lr = sess.run([loss_op, train_op, lr_op])
 					#accuracy = np.sum(logits.eval() == labels) / 128.0
 					#print('labels' + str(labels))
+					print('index ' + str(indexes))
 					#print('logits' + str(logits.eval()))
 					print(str(i) + ' round, loss = ' + str(loss))
 					print(str(i) + ' round, lr = '),

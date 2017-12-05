@@ -16,34 +16,36 @@ def readOneImage(fileNameQueue):
 	_, serializedExample = reader.read(fileNameQueue)
 	features = tf.parse_single_example(serializedExample,
 									   features={
+									   	'index': tf.FixedLenFeature([], tf.int64),
 									   	'label': tf.FixedLenFeature([], tf.string),
 									   	'image': tf.FixedLenFeature([], tf.string),
 									   })
 	image = tf.decode_raw(features['image'], tf.uint8)
 #label = tf.cast(features['label'], tf.uint8)
 	label = tf.decode_raw(features['label'], tf.uint8)
-	return image, label
+	index = tf.cast(features['index'], tf.int32)
+	return image, label, index
 
-def generateBatchImageLabel(image, label, minQueueNum, batchSize, shuffle):
+def generateBatchImageLabel(image, label, index, minQueueNum, batchSize, shuffle):
 	numPreprocessThreashs = 16
 	if(shuffle):
-		images, labels = tf.train.shuffle_batch(
-			[image, label],
+		images, labels, indexes = tf.train.shuffle_batch(
+			[image, label, index],
 			batch_size=batchSize,
 			num_threads=numPreprocessThreashs,
 			capacity=minQueueNum + 3 * batchSize,
 			min_after_dequeue=minQueueNum)
 	else:
-		images, labels = tf.train.batch(
-			[image, label],
+		images, labels, indexes = tf.train.batch(
+			[image, label, index],
 			batch_size=batchSize,
 			num_threads=numPreprocessThreashs,
 			capacity=minQueueNum + 3 * batchSize)
-	return images, tf.reshape(labels, [batchSize, NUM_CLASSES])
+	return images, tf.reshape(labels, [batchSize, NUM_CLASSES]), indexes
 
 def input(TFRecordsFile):
 	fileNameQueue = tf.train.string_input_producer([TFRecordsFile])
-	image, label = readOneImage(fileNameQueue)
+	image, label, index = readOneImage(fileNameQueue)
 	
 	image = tf.reshape(image, [width, height, channel])
 	label = tf.reshape(label, [NUM_CLASSES])
@@ -53,7 +55,7 @@ def input(TFRecordsFile):
 	#imageFloat = tf.image.per_image_standardization(imageFloat)
 	minFractionInQueue = 0.4
 	minQueueExample = int(minFractionInQueue * numExaplesPerEpoch) 
-	return generateBatchImageLabel(imageFloat, labelFloat, minQueueExample,
+	return generateBatchImageLabel(imageFloat, labelFloat, index, minQueueExample,
 								   batch, shuffle=True)
 
 def main():

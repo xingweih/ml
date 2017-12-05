@@ -11,13 +11,15 @@ NUM_CLASSES = 20
 def createTFRecords():
 	writer = tf.python_io.TFRecordWriter("all_train.tfrecords")
 	path = '../../../VOCdevkit/VOC2012/'
-	fileList = open(path + 'ImageSets/Main/all_train_onehot_labels.txt')
+	fileList = open(path + 'ImageSets/Main/all_train_onehot_labels_index.txt')
 	line = fileList.readline()
 	while(line):
 		imageName = line.split()[0]
 		label = []
 		for i in range(NUM_CLASSES):
 			label.append(int(line.split()[i+1]))
+		index = line.split()[i+2]
+		index = int(index)
 		labelBytes = bytes(label)
 		imageName = path + 'JPEGImages/' + imageName + '.jpg'
 		image = Image.open(imageName)
@@ -29,6 +31,7 @@ def createTFRecords():
 		image = tf.image.resize_images(image, size=[width, height])
 		'''
 		example = tf.train.Example(features=tf.train.Features(feature={
+		'index': tf.train.Feature(int64_list=tf.train.Int64List(value=[index])),
 		'label': tf.train.Feature(bytes_list=tf.train.BytesList(value=[labelBytes])),
 		'image': tf.train.Feature(bytes_list=tf.train.BytesList(value=[imageBytes]))
 		}))
