@@ -7,7 +7,7 @@ import matplotlib as plt
 width = 224
 height = 224
 channel = 3
-batch = 64 
+batch = 64
 numExaplesPerEpoch = 2000
 NUM_CLASSES = 20
 
@@ -21,7 +21,7 @@ def readOneImage(fileNameQueue):
 									   	'image': tf.FixedLenFeature([], tf.string),
 									   })
 	image = tf.decode_raw(features['image'], tf.uint8)
-#label = tf.cast(features['label'], tf.uint8)
+	#label = tf.cast(features['label'], tf.uint8)
 	label = tf.decode_raw(features['label'], tf.uint8)
 	index = tf.cast(features['index'], tf.int32)
 	return image, label, index

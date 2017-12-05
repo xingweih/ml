@@ -25,7 +25,8 @@ def train():
 	TRAIN_ROUND = FLAGS.train_round 
 	with tf.Graph().as_default():
 		global_step = tf.contrib.framework.get_or_create_global_step()
-		imageBatch, labelBatch, indexBatch = person_input.input('all_train.tfrecords')
+		#imageBatch, labelBatch, indexBatch = person_input.input('all_train.tfrecords')
+		images, labels, indexes = person_input.input('all_train.tfrecords')
 		thresh = tf.constant(0.5, shape=[batch, NUM_CLASSES])
 
 		with tf.Session() as sess:
@@ -38,7 +39,7 @@ def train():
 			merged = tf.summary.merge_all()
 			train_writer = tf.summary.FileWriter('tensorboard/', sess.graph)
 
-			images, labels, indexes = sess.run([imageBatch, labelBatch, indexBatch])
+			#images, labels, indexes = sess.run([imageBatch, labelBatch, indexBatch])
 			logits = person.inference(images)
 			total_loss = person.loss(logits, labels)
 			loss_op, train_op, lr_op = person.train(total_loss, global_step)
@@ -54,20 +55,20 @@ def train():
 					print('restore model success')
 				for i in range(TRAIN_ROUND):
 					loss, train, lr = sess.run([loss_op, train_op, lr_op])
-					#accuracy = np.sum(logits.eval() == labels) / 128.0
-					#print('labels' + str(labels))
-					print('index ' + str(indexes))
+					#accuracy = np.sum(logits.eval() == labels.eval()) / 128.0
+					#print('labels' + str(labels.eval()))
+					print('index ' + str(indexes.eval()))
 					#print('logits' + str(logits.eval()))
 					print(str(i) + ' round, loss = ' + str(loss))
-					print(str(i) + ' round, lr = '),
+					print(str(i) + ' round, lr = ', end='')
 					print('%.6f' % lr)
 					if(i == TRAIN_ROUND-1):
-						#print('labels' + str(labels))
+						#print('labels' + str(labels.eval()))
 						resSigmoid = tf.sigmoid(logits.eval())
 						np.savetxt('sigmoid.txt', sess.run(resSigmoid), fmt='%.4f')
 						resCompare = tf.greater(resSigmoid, thresh)
 						np.savetxt('pred.txt', sess.run(resCompare), fmt='%.4f')
-						resEqual = tf.equal(resCompare, labels)
+						resEqual = tf.equal(resCompare, labels.eval())
 						resEqual = tf.cast(resEqual, tf.int32)
 						np.savetxt('compare.txt', sess.run(resEqual), fmt='%d')
 					#tensorboard
@@ -102,8 +103,8 @@ def train():
 				np.savetxt('sigmoid.txt', sess.run(resSigmoid), fmt='%.4f')
 				resCompare = tf.greater(resSigmoid, thresh)
 				np.savetxt('pred.txt', sess.run(resCompare), fmt='%d')
-				np.savetxt('label.txt', labels, fmt='%d')
-				resEqual = tf.equal(resCompare, labels)
+				np.savetxt('label.txt', labels.eval(), fmt='%d')
+				resEqual = tf.equal(resCompare, labels.eval())
 				resEqual = tf.cast(resEqual, tf.int32)
 				np.savetxt('compare.txt', sess.run(resEqual), fmt='%d')
 			coord.request_stop()
