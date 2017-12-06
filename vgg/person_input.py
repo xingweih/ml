@@ -7,7 +7,7 @@ import matplotlib as plt
 width = 224
 height = 224
 channel = 3
-batch = 64
+batch = 32
 numExaplesPerEpoch = 2000
 NUM_CLASSES = 20
 

@@ -19,8 +19,8 @@ FLAGS = parser.parse_args()
 FLAGS.batch_size = person_input.batch
 
 NUM_CLASSES = 20
-MOVING_AVERAGE_DECAY = 0.99# The decay to use for the moving average.
-NUM_EPOCHS_PER_DECAY = 35.0      # Epochs after which learning rate decays.
+MOVING_AVERAGE_DECAY = 0.9# The decay to use for the moving average.
+NUM_EPOCHS_PER_DECAY = 100.0      # Epochs after which learning rate decays.
 LEARNING_RATE_DECAY_FACTOR = 0.96  # Learning rate decay factor.
 INITIAL_LEARNING_RATE = 1e-2	# Initial learning rate.
 NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 1000

@@ -36,13 +36,13 @@ def train():
 			#tensorboard
 			#test = tf.constant([1, 2, 3, 4, 10])
 			#tf.summary.scalar('test', test)
-			merged = tf.summary.merge_all()
-			train_writer = tf.summary.FileWriter('tensorboard/', sess.graph)
-
 			#images, labels, indexes = sess.run([imageBatch, labelBatch, indexBatch])
 			logits = person.inference(images)
 			total_loss = person.loss(logits, labels)
 			loss_op, train_op, lr_op = person.train(total_loss, global_step)
+
+			merged = tf.summary.merge_all()
+			train_writer = tf.summary.FileWriter('tensorboard/', sess.graph)
 
 			#print(images)
 			#print(tf.trainable_variables())
@@ -57,7 +57,7 @@ def train():
 					loss, train, lr = sess.run([loss_op, train_op, lr_op])
 					#accuracy = np.sum(logits.eval() == labels.eval()) / 128.0
 					#print('labels' + str(labels.eval()))
-					print('index ' + str(indexes.eval()))
+					#print('index ' + str(indexes.eval()))
 					#print('logits' + str(logits.eval()))
 					print(str(i) + ' round, loss = ' + str(loss))
 					print(str(i) + ' round, lr = ', end='')
