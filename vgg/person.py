@@ -53,14 +53,20 @@ def generate_variables(name, shape, initializer):
  						   shape=shape,
 						   initializer=initializer)
 
-def generate_weight(name, shape, stddev, dtype=tf.float32):
+def generate_weight(name, shape, stddev, wd=5e-4):
 	'''
 	return generate_variables(name, shape,
 		initializer=tf.truncated_normal_initializer(stddev=stddev, dtype=dtype))
 	'''
-	return tf.get_variable(name=name, shape=shape, 
+	var = tf.get_variable(name=name, shape=shape, 
 						   initializer=tf.contrib.layers.xavier_initializer_conv2d(),
 						  )
+	if wd is not None:
+		#print('add l2_loss')
+		weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name='weight_loss')
+		tf.add_to_collection('losses', weight_decay)
+	
+	return var
 
 def generate_bias(name, shape, constant):
 	return generate_variables(name, shape,
@@ -225,6 +231,12 @@ def accuracy(logits, labels):
 	return 100.0 - (
 		100 * 
 		np.sum(logits == labels) / labels.shape[0])
+
+def predict(logits):
+	thresh = tf.constant(0.5, shape=[FLAGS.batch_size, NUM_CLASSES])
+	resSigmoid = tf.sigmoid(logits)
+	resCompare = tf.greater(resSigmoid, thresh)
+	return resCompare
 
 def _add_loss_summaries(total_loss):
 	print('----------------train._add_loss_summaries---------------------')

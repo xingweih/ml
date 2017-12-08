@@ -7,11 +7,18 @@ import matplotlib as plt
 width = 224
 height = 224
 NUM_CLASSES = 20
+CREATE_TRAIN_DATASET = 0
 
 def createTFRecords():
-	writer = tf.python_io.TFRecordWriter("all_train.tfrecords")
+	if(CREATE_TRAIN_DATASET == 1):
+		writer = tf.python_io.TFRecordWriter("all_train.tfrecords")
+	else:
+		writer = tf.python_io.TFRecordWriter("all_val.tfrecords")
 	path = '../../../VOCdevkit/VOC2012/'
-	fileList = open(path + 'ImageSets/Main/all_train_onehot_labels_index.txt')
+	if(CREATE_TRAIN_DATASET == 1):
+		fileList = open(path + 'ImageSets/Main/all_train_onehot_labels_index.txt')
+	else:
+		fileList = open(path + 'ImageSets/Main/all_val_onehot_labels_index.txt')
 	line = fileList.readline()
 	while(line):
 		imageName = line.split()[0]

@@ -47,9 +47,14 @@ def input(TFRecordsFile):
 	fileNameQueue = tf.train.string_input_producer([TFRecordsFile])
 	image, label, index = readOneImage(fileNameQueue)
 	
+	image = tf.cast(image, tf.float32)
 	image = tf.reshape(image, [width, height, channel])
+	image = tf.image.random_flip_left_right(image)
+	image = tf.image.random_brightness(image, max_delta=1.0)
+	image = tf.image.random_contrast(image, lower=0.2, upper=1.8)
 	label = tf.reshape(label, [NUM_CLASSES])
-	imageFloat = tf.cast(image, tf.float32) * (1. / 255) - 0.5
+	imageFloat = tf.image.per_image_standardization(image)
+	#imageFloat = tf.cast(image, tf.float32) * (1. / 255) - 0.5
 	labelFloat = tf.cast(label, tf.float32)
 
 	#imageFloat = tf.image.per_image_standardization(imageFloat)

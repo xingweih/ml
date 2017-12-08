@@ -40,6 +40,7 @@ def train():
 			logits = person.inference(images)
 			total_loss = person.loss(logits, labels)
 			loss_op, train_op, lr_op = person.train(total_loss, global_step)
+			pred = person.predict(logits)
 
 			merged = tf.summary.merge_all()
 			train_writer = tf.summary.FileWriter('tensorboard/', sess.graph)
@@ -62,6 +63,7 @@ def train():
 					print(str(i) + ' round, loss = ' + str(loss))
 					print(str(i) + ' round, lr = ', end='')
 					print('%.6f' % lr)
+					'''
 					if(i == TRAIN_ROUND-1):
 						#print('labels' + str(labels.eval()))
 						resSigmoid = tf.sigmoid(logits.eval())
@@ -71,9 +73,10 @@ def train():
 						resEqual = tf.equal(resCompare, labels.eval())
 						resEqual = tf.cast(resEqual, tf.int32)
 						np.savetxt('compare.txt', sess.run(resEqual), fmt='%d')
+					'''
 					#tensorboard
-					summary = sess.run(merged)
-					train_writer.add_summary(summary, i)
+					#summary = sess.run(merged)
+					#train_writer.add_summary(summary, i)
 				saver.save(sess, 'model/train.ckpt')
 				coord.request_stop()
 				coord.join(threads)
@@ -96,9 +99,17 @@ def train():
 				#way 3
 				saver.restore(sess, 'model/train.ckpt')
 				'''
-				loss, train, lr = sess.run([loss_op, train_op, lr_op])
-				print('test loss = ' + str(loss))
-				print('test lr = ' + str(lr))
+				list_in = [loss_op, train_op, lr_op, logits, pred, labels]
+				#loss, train, lr = sess.run([loss_op, train_op, lr_op])
+				list_out = sess.run(list_in)
+				print(len(list_out))
+				#list_out = [loss, train, lr, logits_out, labels_out]
+				print('test loss = ' + str(list_out[0]))
+				print('test lr = ' + str(list_out[2]))
+				np.savetxt('logits.txt', list_out[3], fmt='%.2f')
+				np.savetxt('pred.txt', list_out[4], fmt='%d')
+				np.savetxt('labels.txt', list_out[5], fmt='%d')
+				'''
 				resSigmoid = tf.sigmoid(logits.eval())
 				np.savetxt('sigmoid.txt', sess.run(resSigmoid), fmt='%.4f')
 				resCompare = tf.greater(resSigmoid, thresh)
@@ -107,6 +118,7 @@ def train():
 				resEqual = tf.equal(resCompare, labels.eval())
 				resEqual = tf.cast(resEqual, tf.int32)
 				np.savetxt('compare.txt', sess.run(resEqual), fmt='%d')
+				'''
 			coord.request_stop()
 			coord.join(threads)
 
