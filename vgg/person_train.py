@@ -37,10 +37,11 @@ def train():
 			#test = tf.constant([1, 2, 3, 4, 10])
 			#tf.summary.scalar('test', test)
 			#images, labels, indexes = sess.run([imageBatch, labelBatch, indexBatch])
-			logits = person.inference(images)
+			logits = person.inference(images, dropoutRate=0.5)
 			total_loss = person.loss(logits, labels)
 			loss_op, train_op, lr_op = person.train(total_loss, global_step)
 			pred = person.predict(logits)
+			accuracy = person.accuracy(logits, labels)
 
 			merged = tf.summary.merge_all()
 			train_writer = tf.summary.FileWriter('tensorboard/', sess.graph)
@@ -55,25 +56,16 @@ def train():
 					saver.restore(sess, model_file)
 					print('restore model success')
 				for i in range(TRAIN_ROUND):
-					loss, train, lr = sess.run([loss_op, train_op, lr_op])
+					list_in = [loss_op, train_op, lr_op, logits, pred, labels, accuracy]
+					list_out = sess.run(list_in)
 					#accuracy = np.sum(logits.eval() == labels.eval()) / 128.0
 					#print('labels' + str(labels.eval()))
 					#print('index ' + str(indexes.eval()))
 					#print('logits' + str(logits.eval()))
-					print(str(i) + ' round, loss = ' + str(loss))
+					print(str(i) + ' round, loss = ' + str(list_out[0]))
 					print(str(i) + ' round, lr = ', end='')
-					print('%.6f' % lr)
-					'''
-					if(i == TRAIN_ROUND-1):
-						#print('labels' + str(labels.eval()))
-						resSigmoid = tf.sigmoid(logits.eval())
-						np.savetxt('sigmoid.txt', sess.run(resSigmoid), fmt='%.4f')
-						resCompare = tf.greater(resSigmoid, thresh)
-						np.savetxt('pred.txt', sess.run(resCompare), fmt='%.4f')
-						resEqual = tf.equal(resCompare, labels.eval())
-						resEqual = tf.cast(resEqual, tf.int32)
-						np.savetxt('compare.txt', sess.run(resEqual), fmt='%d')
-					'''
+					print('%.6f' % list_out[2])
+					print('accuracy = ' + str(list_out[6]))
 					#tensorboard
 					#summary = sess.run(merged)
 					#train_writer.add_summary(summary, i)
@@ -109,16 +101,6 @@ def train():
 				np.savetxt('logits.txt', list_out[3], fmt='%.2f')
 				np.savetxt('pred.txt', list_out[4], fmt='%d')
 				np.savetxt('labels.txt', list_out[5], fmt='%d')
-				'''
-				resSigmoid = tf.sigmoid(logits.eval())
-				np.savetxt('sigmoid.txt', sess.run(resSigmoid), fmt='%.4f')
-				resCompare = tf.greater(resSigmoid, thresh)
-				np.savetxt('pred.txt', sess.run(resCompare), fmt='%d')
-				np.savetxt('label.txt', labels.eval(), fmt='%d')
-				resEqual = tf.equal(resCompare, labels.eval())
-				resEqual = tf.cast(resEqual, tf.int32)
-				np.savetxt('compare.txt', sess.run(resEqual), fmt='%d')
-				'''
 			coord.request_stop()
 			coord.join(threads)
 

@@ -203,10 +203,10 @@ def inference(images, weight_bias=None, dropoutRate=1.0):
 	flatten = tf.reshape(pool5, [-1, 7*7*512])
 	fc6 = fc(flatten, 7*7*512, 4096, name='fc6', weight_bias=weight_bias)
 		
-	dropout6 = dropout(fc6, keep_prob=0.5)
+	dropout6 = dropout(fc6, keep_prob=dropoutRate)
 
 	fc7 = fc(fc6, 4096, 4096, name='fc7', weight_bias=weight_bias)
-	dropout7 = dropout(fc7, keep_prob=0.5)
+	dropout7 = dropout(fc7, keep_prob=dropoutRate)
 
 	fc8 = fc(fc7, 4096, NUM_CLASSES, name='fc8', 
 			 relu=False, weight_bias=weight_bias)
@@ -227,16 +227,18 @@ def loss(logits, labels):
 
 	return tf.add_n(tf.get_collection('losses'), name='total_loss')
 
-def accuracy(logits, labels):
-	return 100.0 - (
-		100 * 
-		np.sum(logits == labels) / labels.shape[0])
-
 def predict(logits):
 	thresh = tf.constant(0.5, shape=[FLAGS.batch_size, NUM_CLASSES])
 	resSigmoid = tf.sigmoid(logits)
 	resCompare = tf.greater(resSigmoid, thresh)
-	return resCompare
+	return tf.cast(resCompare, tf.float32)
+
+def accuracy(logits, labels):
+	pred = predict(logits)
+	isEqual = tf.equal(pred, labels)
+	isEqual = tf.cast(isEqual, tf.float32)
+	return tf.reduce_mean(isEqual)
+	
 
 def _add_loss_summaries(total_loss):
 	print('----------------train._add_loss_summaries---------------------')
