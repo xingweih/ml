@@ -43,15 +43,16 @@ def generateBatchImageLabel(image, label, index, minQueueNum, batchSize, shuffle
 			capacity=minQueueNum + 3 * batchSize)
 	return images, tf.reshape(labels, [batchSize, NUM_CLASSES]), indexes
 
-def input(TFRecordsFile):
+def input(TFRecordsFile, augmentation=True, shuffle=True):
 	fileNameQueue = tf.train.string_input_producer([TFRecordsFile])
 	image, label, index = readOneImage(fileNameQueue)
 	
 	image = tf.cast(image, tf.float32)
 	image = tf.reshape(image, [width, height, channel])
-	image = tf.image.random_flip_left_right(image)
-	image = tf.image.random_brightness(image, max_delta=1.0)
-	image = tf.image.random_contrast(image, lower=0.2, upper=1.8)
+	if(augmentation == True):
+		image = tf.image.random_flip_left_right(image)
+		image = tf.image.random_brightness(image, max_delta=1.0)
+		image = tf.image.random_contrast(image, lower=0.2, upper=1.8)
 	label = tf.reshape(label, [NUM_CLASSES])
 	imageFloat = tf.image.per_image_standardization(image)
 	#imageFloat = tf.cast(image, tf.float32) * (1. / 255) - 0.5
@@ -61,7 +62,7 @@ def input(TFRecordsFile):
 	minFractionInQueue = 0.4
 	minQueueExample = int(minFractionInQueue * numExaplesPerEpoch) 
 	return generateBatchImageLabel(imageFloat, labelFloat, index, minQueueExample,
-								   batch, shuffle=True)
+								   batch, shuffle=shuffle)
 
 def main():
 	imageBatch, labelBatch = input('all_train.tfrecords')

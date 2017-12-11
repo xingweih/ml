@@ -26,7 +26,7 @@ def train():
 	with tf.Graph().as_default():
 		global_step = tf.contrib.framework.get_or_create_global_step()
 		#imageBatch, labelBatch, indexBatch = person_input.input('all_val.tfrecords')
-		images, labels, indexes = person_input.input('all_val.tfrecords')
+		images, labels, indexes = person_input.input('all_val.tfrecords', False)
 		thresh = tf.constant(0.5, shape=[batch, NUM_CLASSES])
 
 		with tf.Session() as sess:
@@ -37,7 +37,7 @@ def train():
 			#test = tf.constant([1, 2, 3, 4, 10])
 			#tf.summary.scalar('test', test)
 			#images, labels, indexes = sess.run([imageBatch, labelBatch, indexBatch])
-			logits = person.inference(images)
+			logits = person.inference(images, dropoutRate=1.0)
 			total_loss = person.loss(logits, labels)
 			loss_op, train_op, lr_op = person.train(total_loss, global_step)
 			pred = person.predict(logits)
@@ -74,17 +74,6 @@ def train():
 			np.savetxt('logits.txt', list_out[3], fmt='%.2f')
 			np.savetxt('pred.txt', list_out[4], fmt='%d')
 			np.savetxt('labels.txt', list_out[5], fmt='%d')
-			'''
-			resSigmoid = tf.sigmoid(logits.eval())
-			np.savetxt('sigmoid.txt', sess.run(resSigmoid), fmt='%.4f')
-			resCompare = tf.greater(resSigmoid, thresh)
-			np.savetxt('pred.txt', sess.run(resCompare), fmt='%d')
-			np.savetxt('label.txt', labels.eval(), fmt='%d')
-			resEqual = tf.equal(resCompare, labels.eval())
-			resEqual = tf.cast(resEqual, tf.int32)
-			np.savetxt('compare.txt', sess.run(resEqual), fmt='%d')
-			'''
-
 			coord.request_stop()
 			coord.join(threads)
 
