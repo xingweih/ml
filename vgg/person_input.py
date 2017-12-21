@@ -49,6 +49,7 @@ def input(TFRecordsFile, augmentation=True, shuffle=True):
 	
 	image = tf.cast(image, tf.float32)
 	image = tf.reshape(image, [width, height, channel])
+	image = tf.image.resize_images(image, (width, height))
 	if(augmentation == True):
 		image = tf.image.random_flip_left_right(image)
 		image = tf.image.random_brightness(image, max_delta=1.0)

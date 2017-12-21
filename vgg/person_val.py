@@ -4,19 +4,12 @@ import numpy as np
 from PIL import Image
 import argparse
 
-
 import person_input
 import person
 
 parser = person.parser
-parser.add_argument('--train_dir', type=str, default='/tmp/xwhuang/person_train',
-                    help='Directory where to write event logs and checkpoint.')
 parser.add_argument('--max_steps', type=int, default=10000,
                     help='Number of batches to run.')
-parser.add_argument('--log_device_placement', type=bool, default=False,
-                    help='Whether to log device placement.')
-parser.add_argument('--log_frequency', type=int, default=10,
-                    help='How often to log results to the console.')
 
 NUM_CLASSES = person_input.NUM_CLASSES
 batch = person_input.batch
@@ -37,10 +30,11 @@ def train():
 			#test = tf.constant([1, 2, 3, 4, 10])
 			#tf.summary.scalar('test', test)
 			#images, labels, indexes = sess.run([imageBatch, labelBatch, indexBatch])
-			logits = person.inference(images, dropoutRate=1.0)
+			logits = person.inference_vgg(images, dropoutRate=1.0)
 			total_loss = person.loss(logits, labels)
 			loss_op, train_op, lr_op = person.train(total_loss, global_step)
 			pred = person.predict(logits)
+			accuracy = person.accuracy(logits, labels)
 
 			#print(images)
 			#print(tf.trainable_variables())
@@ -64,16 +58,17 @@ def train():
 			#way 3
 			saver.restore(sess, 'model/train.ckpt')
 			'''
-			list_in = [loss_op, train_op, lr_op, logits, pred, labels]
+			list_in = [logits, pred, labels, indexes, accuracy]
 			#loss, train, lr = sess.run([loss_op, train_op, lr_op])
-			list_out = sess.run(list_in)
-			print(len(list_out))
-			#list_out = [loss, train, lr, logits_out, labels_out]
-			print('test loss = ' + str(list_out[0]))
-			print('test lr = ' + str(list_out[2]))
-			np.savetxt('logits.txt', list_out[3], fmt='%.2f')
-			np.savetxt('pred.txt', list_out[4], fmt='%d')
-			np.savetxt('labels.txt', list_out[5], fmt='%d')
+			for i in range(10):
+				list_out = sess.run(list_in)
+				print(len(list_out))
+				#list_out = [loss, train, lr, logits_out, labels_out]
+				print('image index = ' + str(list_out[3]))
+				print('accuracy = ' + str(list_out[4]))
+			np.savetxt('logits.txt', list_out[0], fmt='%.2f')
+			np.savetxt('pred.txt', list_out[1], fmt='%d')
+			np.savetxt('labels.txt', list_out[2], fmt='%d')
 			coord.request_stop()
 			coord.join(threads)
 

@@ -9,8 +9,6 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--batch_size', type=int, default=128,
                     help='Number of images to process in a batch.')
-parser.add_argument('--test', type=int, default=1,
-                    help='train or test')
 parser.add_argument('--train_round', type=int, default=100,
                     help='How many round to train')
 parser.add_argument('--continue_train', type=int, default=1,
@@ -74,7 +72,101 @@ def generate_bias(name, shape, constant):
 
 
 
-def inference(images, weight_bias=None, dropoutRate=1.0):
+def inference_alex(images, weight_bias=None, dropoutRate=1.0):
+	with tf.variable_scope('conv1') as scope:
+		if(weight_bias == None):
+			kernel = tf.Variable(tf.truncated_normal([11, 11, 3, 96],
+				dtype = tf.float32, stddev=1e-2), name='weights')
+			biases = tf.Variable(tf.constant(0.0, shape=[96], dtype=tf.float32), name='biases')
+		else:
+			kernel = weight_bias['conv1'][0]
+			biases = weight_bias['conv1'][1]
+		conv = tf.nn.conv2d(images, kernel, [1, 4, 4, 1], padding='VALID')
+		bias = tf.nn.bias_add(conv, biases)
+		conv1 = tf.nn.relu(bias, name='conv1')
+
+	pool1 = tf.nn.max_pool(conv1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
+		padding='VALID', name='pool1')
+
+	with tf.variable_scope('lrn1') as scope:
+		lrn1 = tf.nn.local_response_normalization(pool1, alpha=1e-4,
+			beta=0.75, depth_radius=2, bias=2.0)
+	
+	with tf.variable_scope('conv2') as scope:
+		if(weight_bias == None):
+			kernel = tf.Variable(tf.truncated_normal([5, 5, 96, 256],
+				dtype = tf.float32, stddev=1e-2), name='weights')
+			biases = tf.Variable(tf.constant(0.1, shape=[256], dtype=tf.float32), name='biases')
+		else:
+			kernel = weight_bias['conv2'][0]
+			#kernel = tf.concat(2, [kernelHalf.tolist(), kernelHalf.tolist()])
+			kernel = np.concatenate((kernel, kernel), axis=2)
+			biases = weight_bias['conv2'][1]
+		conv = tf.nn.conv2d(lrn1, kernel, [1, 1, 1, 1], padding='SAME')
+		bias = tf.nn.bias_add(conv, biases)
+		conv2 = tf.nn.relu(bias, name='conv2')
+
+	pool2 = tf.nn.max_pool(conv2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
+		padding='VALID', name='pool2')
+
+	with tf.variable_scope('lrn2') as scope:
+		lrn2 = tf.nn.local_response_normalization(pool2, alpha=1e-4,
+			beta=0.75, depth_radius=2, bias=2.0)
+
+	with tf.variable_scope('conv3') as scope:
+		if(weight_bias == None):
+			kernel = tf.Variable(tf.truncated_normal([3, 3, 256, 384],
+				dtype = tf.float32, stddev=1e-2), name='weights')
+			biases = tf.Variable(tf.constant(0.0, shape=[384], dtype=tf.float32), name='biases')
+		else:
+			kernel = weight_bias['conv3'][0]
+			biases = weight_bias['conv3'][1]
+		conv = tf.nn.conv2d(lrn2, kernel, [1, 1, 1, 1], padding='SAME')
+		bias = tf.nn.bias_add(conv, biases)
+		conv3 = tf.nn.relu(bias, name='conv3')
+	
+	with tf.variable_scope('conv4') as scope:
+		if(weight_bias == None):
+			kernel = tf.Variable(tf.truncated_normal([3, 3, 384, 384],
+				dtype = tf.float32, stddev=1e-2), name='weights')
+			biases = tf.Variable(tf.constant(0.1, shape=[384], dtype=tf.float32), name='biases')
+		else:
+			kernel = weight_bias['conv4'][0]
+			kernel = np.concatenate((kernel, kernel), axis=2)
+			biases = weight_bias['conv4'][1]
+		conv = tf.nn.conv2d(conv3, kernel, [1, 1, 1, 1], padding='SAME')
+		bias = tf.nn.bias_add(conv, biases)
+		conv4 = tf.nn.relu(bias, name='conv4')
+
+	with tf.variable_scope('conv5') as scope:
+		if(weight_bias == None):
+			kernel = tf.Variable(tf.truncated_normal([3, 3, 384, 256],
+				dtype = tf.float32, stddev=1e-2), name='weights')
+			biases = tf.Variable(tf.constant(0.1, shape=[256], dtype=tf.float32), name='biases')
+		else:
+			kernel = weight_bias['conv5'][0]
+			kernel = np.concatenate((kernel, kernel), axis=2)
+			biases = weight_bias['conv5'][1]
+		conv = tf.nn.conv2d(conv4, kernel, [1, 1, 1, 1], padding='SAME')
+		bias = tf.nn.bias_add(conv, biases)
+		conv5 = tf.nn.relu(bias, name='conv5')
+
+	pool5 = tf.nn.max_pool(conv5, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
+		padding='VALID', name='pool2')
+
+	flatten = tf.reshape(pool5, [-1, 6*6*256])
+	fc6 = fc(flatten, 6*6*256, 4096, name='fc6', weight_bias=weight_bias)
+		
+	dropout6 = dropout(fc6, dropoutRate)
+
+	fc7 = fc(fc6, 4096, 4096, name='fc7', weight_bias=weight_bias)
+	dropout7 = dropout(fc7, dropoutRate)
+
+	fc8 = fc(fc7, 4096, NUM_CLASSES, name='fc8', relu=False, weight_bias=weight_bias)
+	dropout8 = dropout(fc8, dropoutRate)
+	return dropout8
+
+def inference_vgg(images, weight_bias=None, dropoutRate=1.0):
 	print('----------------train.inference---------------------')
 	with tf.variable_scope('conv1') as scope:
 		if(weight_bias == None):
@@ -234,10 +326,14 @@ def predict(logits):
 	return tf.cast(resCompare, tf.float32)
 
 def accuracy(logits, labels):
+	ones = tf.ones([FLAGS.batch_size], tf.int32)
 	pred = predict(logits)
 	isEqual = tf.equal(pred, labels)
-	isEqual = tf.cast(isEqual, tf.float32)
-	return tf.reduce_mean(isEqual)
+	isEqual = tf.cast(isEqual, tf.int32)
+	mean = tf.reduce_mean(isEqual, 1)
+	mean = tf.equal(mean, ones)
+	return tf.cast(mean, tf.int32)
+	#return tf.reduce_mean(isEqual)
 	
 
 def _add_loss_summaries(total_loss):
