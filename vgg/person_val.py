@@ -5,20 +5,15 @@ from PIL import Image
 import argparse
 
 import person_input
-import person
+import person_inference
 
-parser = person.parser
-parser.add_argument('--max_steps', type=int, default=10000,
-                    help='Number of batches to run.')
-
+parser = person_inference.parser
 NUM_CLASSES = person_input.NUM_CLASSES
 batch = person_input.batch
 
 def train():
-	TRAIN_ROUND = FLAGS.train_round 
 	with tf.Graph().as_default():
-		global_step = tf.contrib.framework.get_or_create_global_step()
-		#imageBatch, labelBatch, indexBatch = person_input.input('all_val.tfrecords')
+		globalStep = tf.contrib.framework.get_or_create_global_step()
 		images, labels, indexes = person_input.input('all_val.tfrecords', False)
 		thresh = tf.constant(0.5, shape=[batch, NUM_CLASSES])
 
@@ -26,18 +21,12 @@ def train():
 			coord = tf.train.Coordinator()
 			threads = tf.train.start_queue_runners(coord=coord)
 
-			#tensorboard
-			#test = tf.constant([1, 2, 3, 4, 10])
-			#tf.summary.scalar('test', test)
-			#images, labels, indexes = sess.run([imageBatch, labelBatch, indexBatch])
-			logits = person.inference_vgg(images, dropoutRate=1.0)
-			total_loss = person.loss(logits, labels)
-			loss_op, train_op, lr_op = person.train(total_loss, global_step)
-			pred = person.predict(logits)
-			accuracy = person.accuracy(logits, labels)
+			logits = person_inference.inference_vgg(images, dropoutRate=1.0)
+			totalLoss = person_inference.loss(logits, labels)
+			lossOp, trainOp, lrOp = person_inference.train(totalLoss, globalStep)
+			pred = person_inference.predict(logits)
+			accuracy = person_inference.accuracy(logits, labels)
 
-			#print(images)
-			#print(tf.trainable_variables())
 			saver = tf.train.Saver(tf.trainable_variables(), max_to_keep=1)
 			sess.run(tf.global_variables_initializer())
 
@@ -58,17 +47,16 @@ def train():
 			#way 3
 			saver.restore(sess, 'model/train.ckpt')
 			'''
-			list_in = [logits, pred, labels, indexes, accuracy]
+			listIn = [logits, pred, labels, indexes, accuracy]
 			#loss, train, lr = sess.run([loss_op, train_op, lr_op])
 			for i in range(10):
-				list_out = sess.run(list_in)
-				print(len(list_out))
+				listOut = sess.run(listIn)
 				#list_out = [loss, train, lr, logits_out, labels_out]
-				print('image index = ' + str(list_out[3]))
-				print('accuracy = ' + str(list_out[4]))
-			np.savetxt('logits.txt', list_out[0], fmt='%.2f')
-			np.savetxt('pred.txt', list_out[1], fmt='%d')
-			np.savetxt('labels.txt', list_out[2], fmt='%d')
+				print('image index = ' + str(listOut[3]))
+				print('accuracy = ' + str(listOut[4]))
+			np.savetxt('logits.txt', listOut[0], fmt='%.2f')
+			np.savetxt('pred.txt', listOut[1], fmt='%d')
+			np.savetxt('labels.txt', listOut[2], fmt='%d')
 			coord.request_stop()
 			coord.join(threads)
 

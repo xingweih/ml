@@ -8,7 +8,7 @@ width = 224
 height = 224
 channel = 3
 batch = 32
-numExaplesPerEpoch = 2000
+numExamplesPerEpoch = 2000
 NUM_CLASSES = 20
 
 def readOneImage(fileNameQueue):
@@ -57,12 +57,11 @@ def input(TFRecordsFile, augmentation=True, shuffle=True):
 	label = tf.reshape(label, [NUM_CLASSES])
 	imageFloat = tf.image.per_image_standardization(image)
 	#imageFloat = tf.cast(image, tf.float32) * (1. / 255) - 0.5
-	labelFloat = tf.cast(label, tf.float32)
+	label = tf.cast(label, tf.int32)
 
-	#imageFloat = tf.image.per_image_standardization(imageFloat)
 	minFractionInQueue = 0.4
-	minQueueExample = int(minFractionInQueue * numExaplesPerEpoch) 
-	return generateBatchImageLabel(imageFloat, labelFloat, index, minQueueExample,
+	minQueueExample = int(minFractionInQueue * numExamplesPerEpoch) 
+	return generateBatchImageLabel(imageFloat, label, index, minQueueExample,
 								   batch, shuffle=shuffle)
 
 def main():

@@ -6,9 +6,9 @@ import argparse
 
 
 import person_input
-import person
+import person_inference
 
-parser = person.parser
+parser = person_inference.parser
 
 NUM_CLASSES = person_input.NUM_CLASSES
 batch = person_input.batch
@@ -19,20 +19,20 @@ channel = person_input.channel
 def train():
 	TRAIN_ROUND = FLAGS.train_round 
 	with tf.Graph().as_default():
-		global_step = tf.contrib.framework.get_or_create_global_step()
+		globalStep = tf.contrib.framework.get_or_create_global_step()
 		thresh = tf.constant(0.5, shape=[batch, NUM_CLASSES])
 
-		images_train, labels_train, indexes_train = person_input.input('all_train.tfrecords', True, True)
-		images_val, labels_val, indexes_val = person_input.input('all_val.tfrecords', False, False)
+		imagesTrain, labelsTrain, indexesTrain = person_input.input('all_train.tfrecords', True, True)
+		imagesVal, labelsVal, indexesVal = person_input.input('all_val.tfrecords', False, False)
 
 		imagesIsTrain = tf.placeholder(dtype=bool, shape=())
 		labelsIsTrain = tf.placeholder(dtype=bool, shape=())
 		indexesIsTrain = tf.placeholder(dtype=bool, shape=())
 		dropoutIsTrain = tf.placeholder(dtype=bool, shape=())
 		
-		images = tf.cond(imagesIsTrain, lambda: images_train, lambda: images_val)
-		labels = tf.cond(labelsIsTrain, lambda: labels_train, lambda: labels_val)
-		indexes = tf.cond(indexesIsTrain, lambda: indexes_train, lambda: indexes_val)
+		images = tf.cond(imagesIsTrain, lambda: imagesTrain, lambda: imagesVal)
+		labels = tf.cond(labelsIsTrain, lambda: labelsTrain, lambda: labelsVal)
+		indexes = tf.cond(indexesIsTrain, lambda: indexesTrain, lambda: indexesVal)
 		dropoutRate = tf.cond(dropoutIsTrain, lambda: 0.5, lambda: 1.0)
 
 		with tf.Session() as sess:
@@ -42,11 +42,11 @@ def train():
 			#tensorboard
 			#test = tf.constant([1, 2, 3, 4, 10])
 			#tf.summary.scalar('test', test)
-			logits = person.inference_vgg(images, dropoutRate=dropoutRate)
-			total_loss = person.loss(logits, labels)
-			loss_op, train_op, lr_op = person.train(total_loss, global_step)
-			pred = person.predict(logits)
-			accuracy = person.accuracy(logits, labels)
+			logits = person_inference.inference_vgg(images, dropoutRate=dropoutRate)
+			totalLoss = person_inference.loss(logits, labels)
+			lossOp, trainOp, lrOp = person_inference.train(totalLoss, globalStep)
+			pred = person_inference.predict(logits)
+			accuracy = person_inference.accuracy(logits, labels)
 
 			merged = tf.summary.merge_all()
 			train_writer = tf.summary.FileWriter('tensorboard/', sess.graph)
@@ -60,16 +60,16 @@ def train():
 				saver.restore(sess, model_file)
 				print('restore model success')
 			for i in range(TRAIN_ROUND):
-				listInTrain = [loss_op, logits, pred, labels, accuracy, indexes, train_op, lr_op]
-				listInVal = [total_loss, logits, pred, labels, accuracy, indexes]
+				listInTrain = [lossOp, logits, pred, labels, accuracy, indexes, trainOp, lrOp]
+				listInVal = [totalLoss, logits, pred, labels, accuracy, indexes]
 				if(i % 20 != 0):
-					list_out = sess.run(listInTrain, 
+					listOut = sess.run(listInTrain, 
 								feed_dict={imagesIsTrain : True,
 										   labelsIsTrain : True,
 										   indexesIsTrain: True,
 										   dropoutIsTrain: True})
 				else:
-					list_out = sess.run(listInVal, 
+					listOut = sess.run(listInVal, 
 								feed_dict={imagesIsTrain : False,
 										   labelsIsTrain : False,
 										   indexesIsTrain: False,
@@ -78,13 +78,14 @@ def train():
 				#print('index ' + str(indexes.eval()))
 				#print('logits' + str(logits.eval()))
 				#print(str(i) + ' round, lr = ', end='')
-				#print('%.6f' % list_out[2])
+				#print('%.6f' % listOut[2])
+				#print(str(i) + ' round, Image index = ' + str(listOut[5]))
 				if(i % 20 != 0):
-					print(str(i) + ' round, Train loss = ' + str(list_out[0]))
-					print(str(i) + ' round, Train accuracy = ' + str(list_out[4]))
+					print(str(i) + ' round, Train loss = ' + str(listOut[0]))
+					print(str(i) + ' round, Train accuracy = ' + str(listOut[4]))
 				else:
-					print(str(i) + ' round, Eval loss = ' + str(list_out[0]))
-					print(str(i) + ' round, Eval accuracy = ' + str(list_out[4]))
+					print(str(i) + ' round, Eval loss = ' + str(listOut[0]))
+					print(str(i) + ' round, Eval accuracy = ' + str(listOut[4]))
 
 				#tensorboard
 				#summary = sess.run(merged)
